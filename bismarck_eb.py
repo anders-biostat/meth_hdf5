@@ -29,34 +29,43 @@ def make_pos(d):
     del d["chr"], d["pos"]
     return d
 
-def main():
-    path="/Users/marti/UNI/bismark_5_cells/eb/"
-    files = [ gzip.open(path+f, mode = 'rt') for f in os.listdir(path) if f.endswith(".tsv.gz")]
-    print()
+def read_bismarck_files(files):
     readers = [ csv.DictReader(f, delimiter='\t') for f in files ]
-
     currec = [ make_pos(next(r)) for r in readers ]
 
-    writerv = open("values.txt", "w")
-    writerp = open("positions.txt", "w")
     line_num = 0
 
     while True:
         curpos = min( rc["gp"] for rc in currec )
         if curpos.chrom == "ZZZ":
             break
-        writerp.write(str(curpos) + "," + str(line_num) + "\n" )
 
+        data = []
         for i in range(len(readers)):
             if currec[i]["gp"] == curpos:
-                writerv.write(str(i) + "," + str(currec[i]["met_reads"]) + "," +
-                      str(currec[i]["nonmet_reads"]) + "\n")
-                line_num += 1
+                data.append( { "cell": i, "count_unmeth": currec[i]["nonmet_reads"], "count_meth": currec[i]["met_reads"] } )
                 try:
                     currec[i] = make_pos( next( readers[i] ) )
                 except StopIteration:
                     currec[i] = { "gp": GenomicPosition( "ZZZ", 0 ) }
-        print()
+        yield curpos, data
+
+def write_text_files( pos_file, val_file, data ):
+    line_num = 0
+    for pos, data in data:
+        pos_file.write(str(curpos) + "," + str(line_num) + "\n" )
+
+        for a in data:
+            val_file.write( str(a["cell"]) + "," + a["count_unmeth"] + "," + a["count_meth"] + "\n")
+            line_num += 1
+
+def main():
+    path="eb"
+    files = [ gzip.open(path+"/"+f, mode = 'rt') for f in os.listdir(path) if f.endswith(".tsv.gz") ]
+    writerv = open("values.txt", "w")
+    writerp = open("positions.txt", "w")
+
+    write_text_files( writerp, writerv, read_bismarck_files(files) )
 
     writerv.close()
     writerp.close()
