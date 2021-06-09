@@ -1,7 +1,7 @@
 import csv
 import os
 import gzip
-
+import HDF5
 
 class GenomicPosition:
 
@@ -58,6 +58,28 @@ def write_text_files( pos_file, val_file, data ):
         for a in data:
             val_file.write( str(a["cell"]) + "," + a["count_unmeth"] + "," + a["count_meth"] + "\n")
             line_num += 1
+
+def write_hdf5_files( data ):
+    hf = h5py.File( "test.h5", "w")
+    h5chrom = hf.create_dataset( "bp_chromsome", (100,), dtype='s')
+    h5pos = hf.create_dataset( "bp_position", (100,2), dtype='i4')  # col 0: bp pos,  col 1: pos in h5cell/h5count
+    h5cell = hf.create_dataset( "cell_idx", (100,), dtype='i4')
+    h5counts = hf.create_dataset( "counts", (100,2), dtype='i1')  # col 0: unmeth, col 1: meth
+
+    row_pos = 0
+    row_val = 0
+    for pos, data in data:
+        h5chrom[row_pos] = curpos.chrom
+        h5pos[row_pos] = curpos.pos
+        row_pos += 1
+
+        for a in data:
+            h5cell[row_val,0] = data["cell"]
+            h5cell[row_val,0] = data["cell"]
+            h5counts[row_val,0] = data["count_unmeth"]
+            h5counts[row_val,1] = data["count_meth"]
+            row_val += 1
+
 
 def main():
     path="eb"
